@@ -101,3 +101,12 @@ html {
     font-size: 14px;
     margin-bottom: 15px;
 }
+
+.flash-message {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 10px;
+    background-color: #ffe5e5;
+    color: #c40000;
+    font-weight: bold;
+}

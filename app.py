@@ -89,9 +89,31 @@ def signup():
 def reset_password():
     if request.method == 'POST':
         email = request.form['email']
-        flash('If this email exists, a reset link was sent.')
+        old_pw = request.form['old_password']
+        new_pw = request.form['new_password']
+
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
+
+        if not user:
+            flash("Email not found.")
+            return redirect(url_for('reset_password'))
+
+        if not check_password_hash(user['password'], old_pw):
+            flash("Old password is incorrect.")
+            return redirect(url_for('reset_password'))
+
+        new_hashed = generate_password_hash(new_pw)
+        conn.execute('UPDATE users SET password = ? WHERE email = ?', (new_hashed, email))
+        conn.commit()
+        conn.close()
+
+        flash("Password updated successfully. Please log in.")
         return redirect(url_for('login'))
+
     return render_template("reset_password.html")
+
+
 
 # 🚪 تسجيل الخروج
 @app.route('/logout')
