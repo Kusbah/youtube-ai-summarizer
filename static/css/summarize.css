@@ -1,0 +1,124 @@
+/* Main layout */
+body,
+html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #1f2c39;
+    background-image: url('https://www.transparenttextures.com/patterns/cartographer.png');
+    color: #1f2c39;
+    height: 100vh;
+}
+
+.background {
+    display: flex;
+}
+
+/* Sidebar - بسيط وأنيق */
+.sidebar {
+    width: 80px;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.menu-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.menu-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.menu-items a {
+    text-decoration: none;
+    padding: 6px 10px;
+    font-size: 14px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.menu-items a.active,
+.menu-items a:hover {
+    background-color: white;
+    color: #1f2c39;
+}
+
+/* Content center */
+.content {
+    flex: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 25px;
+}
+
+/* Error message */
+.error-message {
+    background-color: #f6c851;
+    color: #000;
+    font-weight: bold;
+    padding: 12px 20px;
+    border-radius: 20px;
+    width: 450px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Input with icon */
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    padding: 15px 20px;
+    border-radius: 50px;
+    width: 450px;
+    box-shadow: 5px 7px 0px black;
+    border: 2px solid #000;
+}
+
+.input-wrapper i {
+    color: #1f2c39;
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.input-wrapper input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 15px;
+    background: transparent;
+    color: #222;
+}
+
+/* Button */
+.summarize-btn {
+    background-color: white;
+    color: #1f2c39;
+    border: 2px solid black;
+    padding: 14px 30px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 5px 7px 0px black;
+    transition: 0.3s;
+}
+
+.summarize-btn:hover {
+    background-color: #f6c851;
+    transform: scale(1.05);
+}

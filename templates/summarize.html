@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Summarize Video</title>
+
+    <!-- Flask CSS link -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/summarize.css') }}"
+    />
+
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="background">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <button class="menu-btn"><i class="fas fa-bars"></i></button>
+        <div class="menu-items">
+          <a href="{{ url_for('home') }}">Home</a>
+          <a href="{{ url_for('summarize') }}" class="active">Chat</a>
+          <a href="{{ url_for('my_notes') }}">My Notes</a>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <div class="content">
+        <div class="input-wrapper">
+          <i class="fas fa-magnifying-glass"></i>
+          <input type="text" placeholder="www.youtube.com/watch?v=..." />
+        </div>
+
+        <button class="summarize-btn">SUMMARIZE</button>
+      </div>
+    </div>
+
+    <!-- Flask JS link -->
+    <script src="{{ url_for('static', filename='js/summarize.js') }}"></script>
+  </body>
+</html>
