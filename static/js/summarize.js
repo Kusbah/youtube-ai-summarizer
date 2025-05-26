@@ -1,18 +1,11 @@
-document.querySelector(".summarize-btn").addEventListener("click", function () {
-    const input = document.querySelector(".input-wrapper input");
-    const url = input.value.trim();
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//;
-
-    // إزالة أي رسالة خطأ سابقة
-    removeErrorMessage();
+document.querySelector("form").addEventListener("submit", function (e) {
+    const urlInput = document.getElementById("youtube-url");
+    const url = urlInput.value.trim();
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
 
     if (!youtubeRegex.test(url)) {
-        // عرض رسالة خطأ
-        showErrorMessage("Please enter a valid YouTube URL.");
-    } else {
-        console.log("✅ Valid YouTube URL:", url);
-        // ✅ انتقال إلى صفحة summary
-        window.location.href = "summary.html";
+        e.preventDefault();  // ❌ امنع الإرسال
+        document.querySelector(".error-message").textContent = "Please enter a valid YouTube URL.";
     }
 });
 

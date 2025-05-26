@@ -1,17 +1,13 @@
-from youtube_transcript_api import YouTubeTranscriptApi
-from langchain_ollama.chat_models import ChatOllama
+import re
 
-llm = ChatOllama(model="llama3.2:latest")
-
-
-def load_transcript(link):
-    video_id = link.split("v=")[-1].split("&")[0]
-    transcript = YouTubeTranscriptApi.get_transcript(video_id)
-    transcript_dict = {
-        f"{entry['start']:.2f}s - {entry['start'] + entry['duration']:.2f}s": entry[
-            "text"
-        ]
-        for entry in transcript
-    }
-
-    return transcript_dict
+def extract_video_id(url):
+    # يدعم روابط youtube.com و youtu.be
+    patterns = [
+        r"(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)",
+        r"(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?&]+)"
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None

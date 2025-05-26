@@ -1,22 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import sqlite3
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps  # ✅ لإضافة ديكوريتر login_required
+from utils import extract_video_id
+from youtube_transcript_api import YouTubeTranscriptApi
+from functools import wraps
+
 
 app = Flask(__name__)
 app.secret_key = 'youtubai'  # ضروري للجلسات
 
-# ✅ ديكوريتر حماية الصفحات
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash("Please log in first.")
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-# 🧠 دالة لإنشاء الاتصال بالقاعدة
+# 🧠 دالة مساعدة لإنشاء الاتصال بالقاعدة
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
@@ -35,13 +29,30 @@ def init_db():
         ''')
     print("✅ Database initialized.")
 
-init_db()  # تشغيل عند بداية السيرفر
+init_db()  # تشغيلها أول ما يشتغل السيرفر
 
-# 🌐 الصفحة الرئيسية - محمية
+# 🌐 الصفحة الرئيسية
 @app.route('/')
-@login_required
 def home():
     return render_template("home.html")
+
+
+def get_video_metadata(video_url):
+    try:
+        response = requests.get("https://www.youtube.com/oembed", params={
+            "url": video_url,
+            "format": "json"
+        })
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "title": data["title"],
+                "thumbnail": data["thumbnail_url"]
+            }
+        else:
+            return {"title": "Unknown", "thumbnail": ""}
+    except Exception as e:
+        return {"title": "Unknown", "thumbnail": ""}
 
 # 🔐 تسجيل الدخول
 @app.route('/login', methods=['GET', 'POST'])
@@ -58,8 +69,9 @@ def login():
             session['username'] = user['username']
             return redirect(url_for('home'))
 
-        flash('Wrong email or password.')
+        flash('Wrong email or password.')  # ✅ هنا الرسالة
     return render_template("login.html")
+
 
 # 🧾 إنشاء حساب
 @app.route('/signup', methods=['GET', 'POST'])
@@ -81,38 +93,19 @@ def signup():
             flash('Account created successfully! Please log in.')
             return redirect(url_for('login'))
         except sqlite3.IntegrityError:
-            flash('Email already registered.')
+            flash('Email already registered.')  # ✅ هنا الرسالة
     return render_template("signup.html")
 
-# 🔁 إعادة تعيين كلمة المرور
+
+# 🔁 إعادة تعيين كلمة المرور (واجهة فقط الآن)
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'POST':
         email = request.form['email']
-        old_pw = request.form['old_password']
-        new_pw = request.form['new_password']
-
-        conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
-
-        if not user:
-            flash("Email not found.")
-            return redirect(url_for('reset_password'))
-
-        if not check_password_hash(user['password'], old_pw):
-            flash("Old password is incorrect.")
-            return redirect(url_for('reset_password'))
-
-        new_hashed = generate_password_hash(new_pw)
-        conn.execute('UPDATE users SET password = ? WHERE email = ?', (new_hashed, email))
-        conn.commit()
-        conn.close()
-
-        flash("Password updated successfully. Please log in.")
+        # هنا ممكن تضيف إرسال بريد إلكتروني أو رابط مؤقت
+        flash('If this email exists, a reset link was sent.')
         return redirect(url_for('login'))
-
     return render_template("reset_password.html")
-
 
 
 # 🚪 تسجيل الخروج
@@ -121,24 +114,52 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# 📄 صفحة التلخيص - محمية
-@app.route('/summarize')
-@login_required
+@app.route('/summarize', methods=['GET', 'POST'])
 def summarize():
+    if request.method == 'POST':
+        url = request.form.get('url')
+        if not url or "youtube.com" not in url:
+            flash("Invalid YouTube URL.")
+            return redirect(url_for('summarize'))
+
+        video_id = extract_video_id(url)
+
+        try:
+            # جلب الترانسكريبت إذا متاح
+            try:
+                transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
+                transcript = " ".join([t['text'] for t in transcript_data])
+            except Exception:
+                transcript = "❌ This video has no subtitles available."
+
+            thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+
+            return render_template("summary.html",
+                                   transcript=transcript,
+                                   video_url=url,
+                                   video_title="Transcript Viewer",
+                                   thumbnail=thumbnail)
+
+        except Exception as e:
+            print("🔥 ERROR:", e)
+            flash("Something went wrong.")
+            return redirect(url_for('summarize'))
+
     return render_template("summarize.html")
 
-# 🗂️ صفحة الملاحظات - محمية
 @app.route('/my-notes')
-@login_required
 def my_notes():
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
     return render_template("my_notes.html")
 
-# 🤖 صفحة AI Chat - محمية
 @app.route('/ai-chat')
-@login_required
 def ai_chat():
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
     return render_template("ai_chat.html")
 
-# ✅ تشغيل التطبيق
 if __name__ == "__main__":
     app.run(debug=True)
