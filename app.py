@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
+from bs4 import BeautifulSoup
 
 
 app = Flask(__name__)
@@ -42,33 +42,53 @@ def home():
 
 def generate_summary(text, lang):
     if lang == 'ar':
-        prompt = f"""اقرأ النص التالي واستخرج ملخصًا منسقًا على النحو التالي:
+        prompt = f"""Generate an HTML-formatted Arabic summary using the following structure.
 
-ملخص:
-- فقرة قصيرة تلخص المحتوى العام للنص.
+        Do NOT wrap the output in markdown backticks. Return valid HTML directly.
 
-النقاط البارزة:
-- نقاط رئيسية توضح أهم التفاصيل أو الأحداث المذكورة.
+        <strong>📄 الملخص:</strong>
+        <p>فقرة قصيرة تشرح المقطع.</p>
 
-أهم الاستنتاجات:
-- تحليل للأفكار أو الرسائل التي يمكن استخلاصها من النص.
+        <strong>📌 النقاط البارزة:</strong>
+        <ol>
+        <li>...</li>
+        <li>...</li>
+        </ol>
 
-النص:\n\n{text}
-"""
+        <strong>💡 الاستنتاجات:</strong>
+        <ol>
+        <li>...</li>
+        </ol>
+
+        النص:
+        {text}
+        """
+
+
     else:
-        prompt = f"""Read the following transcript and generate a structured summary in this format:
+        prompt = f"""Generate a clean HTML-formatted summary of the following transcript using this structure:
 
-hSummary:
-- A short paragraph summarizing the general idea of the transcript.
+        <strong>📝 Summary:</strong>
+        <p>A short paragraph summarizing the general topic.</p>
 
-Highlights:
-- Bullet points of key events or notable statements.
+        <strong>📌 Highlights:</strong>
+        <ol>
+        <li>First key highlight</li>
+        <li>Second key highlight</li>
+        </ol>
 
-Key Insights:
-- Deeper analysis or takeaways from the transcript content.
+        <strong>💡 Key Insights:</strong>
+        <ol>
+        <li>Insightful point 1</li>
+        <li>Insightful point 2</li>
+        </ol>
 
-Transcript:\n\n{text}
-"""
+        Return the full output in valid HTML only.
+
+        Transcript:
+        {text}
+        """
+
 
     try:
         response = openai.ChatCompletion.create(
@@ -96,6 +116,8 @@ def get_video_title(video_url):
         return "Unknown Title"
     except:
         return "Unknown Title"
+
+
 
 # 🔐 تسجيل الدخول
 @app.route('/login', methods=['GET', 'POST'])
@@ -159,6 +181,9 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+
+
+
 @app.route('/summarize', methods=['GET', 'POST'])
 def summarize():
     if request.method == 'POST':
@@ -174,7 +199,13 @@ def summarize():
         try:
             # 📜 احصل على السكربت + اللغة
             transcript, lang = get_transcript_from_youtube(url)
-            summary = generate_summary(transcript, lang)
+
+            # 🔍 تنظيف الترانسكريبت من HTML قبل التلخيص
+            soup = BeautifulSoup(transcript, "html.parser")
+            clean_text = soup.get_text(separator=' ', strip=True)
+
+            # 📄 تلخيص السكربت النظيف فقط
+            summary = generate_summary(clean_text, lang)
 
             # 🖼 الصورة المصغّرة
             from urllib.parse import urlparse, parse_qs
