@@ -2,9 +2,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
-from utils import extract_video_id
-from youtube_transcript_api import YouTubeTranscriptApi
-from functools import wraps
+from transcriber import get_transcript_from_youtube
+
+
+import os
 
 
 app = Flask(__name__)
@@ -37,22 +38,17 @@ def home():
     return render_template("home.html")
 
 
-def get_video_metadata(video_url):
+def get_video_title(video_url):
     try:
         response = requests.get("https://www.youtube.com/oembed", params={
             "url": video_url,
             "format": "json"
         })
         if response.status_code == 200:
-            data = response.json()
-            return {
-                "title": data["title"],
-                "thumbnail": data["thumbnail_url"]
-            }
-        else:
-            return {"title": "Unknown", "thumbnail": ""}
-    except Exception as e:
-        return {"title": "Unknown", "thumbnail": ""}
+            return response.json().get("title", "No Title")
+        return "Unknown Title"
+    except:
+        return "Unknown Title"
 
 # 🔐 تسجيل الدخول
 @app.route('/login', methods=['GET', 'POST'])
@@ -108,6 +104,8 @@ def reset_password():
     return render_template("reset_password.html")
 
 
+
+
 # 🚪 تسجيل الخروج
 @app.route('/logout')
 def logout():
@@ -118,34 +116,45 @@ def logout():
 def summarize():
     if request.method == 'POST':
         url = request.form.get('url')
-        if not url or "youtube.com" not in url:
-            flash("Invalid YouTube URL.")
-            return redirect(url_for('summarize'))
+        error = None
+        transcript = None
+        lang = None
 
-        video_id = extract_video_id(url)
+        if not url or "youtube.com" not in url:
+            error = "❌ Invalid YouTube URL."
+            return render_template("summary.html", error=error)
 
         try:
-            # جلب الترانسكريبت إذا متاح
-            try:
-                transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
-                transcript = " ".join([t['text'] for t in transcript_data])
-            except Exception:
-                transcript = "❌ This video has no subtitles available."
+            # 📜 احصل على السكربت + اللغة
+            transcript, lang = get_transcript_from_youtube(url)
 
+            # 🖼 الصورة المصغّرة
+            from urllib.parse import urlparse, parse_qs
+            video_id = parse_qs(urlparse(url).query).get("v", [None])[0]
             thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+
+            # 🏷 عنوان الفيديو
+            video_title = get_video_title(url)
 
             return render_template("summary.html",
                                    transcript=transcript,
                                    video_url=url,
-                                   video_title="Transcript Viewer",
-                                   thumbnail=thumbnail)
+                                   video_title=video_title,
+                                   thumbnail=thumbnail,
+                                   lang=lang,
+                                   error=error)
 
         except Exception as e:
-            print("🔥 ERROR:", e)
-            flash("Something went wrong.")
-            return redirect(url_for('summarize'))
+            import traceback
+            print("🔥 Full Traceback:")
+            traceback.print_exc()
+            error = f"❌ Error: {str(e)}"
+            return render_template("summary.html", error=error)
 
     return render_template("summarize.html")
+
+
+
 
 @app.route('/my-notes')
 def my_notes():

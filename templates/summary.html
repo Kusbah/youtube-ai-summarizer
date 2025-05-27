@@ -1,10 +1,25 @@
 <h2>{{ video_title }}</h2>
-<img
-  src="{{ thumbnail }}"
-  alt="Thumbnail"
-  width="300"
-  style="border-radius: 10px"
-/>
+<div style="text-align:center;">
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/{{ video_url.split('v=')[-1] }}"
+    title="YouTube video player" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen></iframe>
+</div>
+
 <p><strong>Summary:</strong> {{ summary }}</p>
 <hr />
-<p><strong>Transcript:</strong> {{ transcript }}</p>
+{% if error %}
+<div style="color: red; font-weight: bold;">{{ error }}</div>
+{% endif %}
+{% if lang == 'ar' %}
+<h3>🎙 اللغة: العربية</h3>
+{% elif lang == 'en' %}
+<h3>🎙 Language: English</h3>
+{% else %}
+<h3>🎙 Language: Unknown</h3>
+{% endif %}
+
+{% if transcript %}
+<h2>Transcript:</h2>
+<p>{{ transcript }}</p>
+{% endif %}
