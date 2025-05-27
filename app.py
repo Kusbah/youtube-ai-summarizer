@@ -3,9 +3,12 @@ import sqlite3
 import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 from transcriber import get_transcript_from_youtube
-
-
+import openai
+from dotenv import load_dotenv
 import os
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 
 app = Flask(__name__)
@@ -37,6 +40,50 @@ init_db()  # تشغيلها أول ما يشتغل السيرفر
 def home():
     return render_template("home.html")
 
+def generate_summary(text, lang):
+    if lang == 'ar':
+        prompt = f"""اقرأ النص التالي واستخرج ملخصًا منسقًا على النحو التالي:
+
+ملخص:
+- فقرة قصيرة تلخص المحتوى العام للنص.
+
+النقاط البارزة:
+- نقاط رئيسية توضح أهم التفاصيل أو الأحداث المذكورة.
+
+أهم الاستنتاجات:
+- تحليل للأفكار أو الرسائل التي يمكن استخلاصها من النص.
+
+النص:\n\n{text}
+"""
+    else:
+        prompt = f"""Read the following transcript and generate a structured summary in this format:
+
+hSummary:
+- A short paragraph summarizing the general idea of the transcript.
+
+Highlights:
+- Bullet points of key events or notable statements.
+
+Key Insights:
+- Deeper analysis or takeaways from the transcript content.
+
+Transcript:\n\n{text}
+"""
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that summarizes YouTube transcripts."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5,
+            max_tokens=700
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print("❌ Summary generation error:", e)
+        return "❌ Failed to generate summary."
 
 def get_video_title(video_url):
     try:
@@ -127,6 +174,7 @@ def summarize():
         try:
             # 📜 احصل على السكربت + اللغة
             transcript, lang = get_transcript_from_youtube(url)
+            summary = generate_summary(transcript, lang)
 
             # 🖼 الصورة المصغّرة
             from urllib.parse import urlparse, parse_qs
@@ -142,6 +190,7 @@ def summarize():
                                    video_title=video_title,
                                    thumbnail=thumbnail,
                                    lang=lang,
+                                   summary=summary,
                                    error=error)
 
         except Exception as e:
