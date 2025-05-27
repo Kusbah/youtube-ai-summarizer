@@ -45,7 +45,7 @@ function startTracking() {
         }
       });
     }
-  }, 2000); // كل ثانية
+  }, 1000); // كل ثانية
 }
 
 // ✅ عند النقر على الكلمة
@@ -82,3 +82,11 @@ window.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+function switchTab(tab) {
+    document.querySelectorAll('.ai-tab').forEach(btn => btn.classList.remove('active'));
+    document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+
+    document.getElementById('ai-notes').style.display = (tab === 'notes') ? 'block' : 'none';
+    document.getElementById('ai-chat').style.display = (tab === 'chat') ? 'block' : 'none';
+  }

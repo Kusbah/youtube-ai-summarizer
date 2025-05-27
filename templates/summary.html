@@ -45,15 +45,47 @@
     </div>
 
     <!-- Right Section -->
-    <div class="right-side">
-      <div class="summary-box">
-        <h4>🧠 Summary</h4>
-        <div class="summary-content">
-          <div class="summary-html">{{ summary | safe }}</div>
-        </div>
+     
+<!-- Right Section -->
+<div class="right-side">
+
+  <!-- AI Tabs -->
+  <div class="ai-tabs">
+    <button class="ai-tab active" onclick="switchTab('notes')">🗒️ AI Notes</button>
+    <button class="ai-tab" onclick="switchTab('chat')">💬 AI Chat</button>
+  </div>
+
+  <!-- AI Notes Section -->
+  <div class="ai-section" id="ai-notes">
+    <div class="summary-box">
+      <h4>🧠 Summary</h4>
+      <div class="summary-content">
+        <div class="summary-html">{{ summary | safe }}</div>
       </div>
     </div>
   </div>
+
+  <!-- AI Chat Section -->
+  <div class="ai-section" id="ai-chat" style="display: none;">
+    <div class="summary-box ai-chat-box">
+      <div class="chat-header">
+        <p>👋🏻 Hi<br>I'm your AI assistant. Feel free to ask me anything about this note!</p>
+      </div>
+  
+      <div class="chat-actions">
+        <button class="chat-btn">🎯 Extract 5 keywords</button>
+        <button class="chat-btn">❓ Extract the outline</button>
+        <button class="chat-btn">📝 Get Notes</button>
+      </div>
+  
+      <div class="chat-input">
+        <input type="text" placeholder="Ask me anything about this content.." />
+        <button class="send-btn">🔼</button>
+      </div>
+    </div>
+    </div>
+</div>
+
   <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
 </body>
 </html>
