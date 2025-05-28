@@ -12,15 +12,15 @@ from bs4 import BeautifulSoup
 
 
 app = Flask(__name__)
-app.secret_key = 'youtubai'  # ضروري للجلسات
+app.secret_key = 'youtubai' 
 
-# 🧠 دالة مساعدة لإنشاء الاتصال بالقاعدة
+#  دالة مساعدة لإنشاء الاتصال بالقاعدة
 def get_db_connection():
     conn = sqlite3.connect('users.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-# 🧱 إنشاء الجدول لو مش موجود
+#  إنشاء الجدول لو مش موجود
 def init_db():
     with get_db_connection() as conn:
         conn.execute('''
@@ -31,7 +31,7 @@ def init_db():
                 password TEXT NOT NULL
             );
         ''')
-    print("✅ Database initialized.")
+    print("Database initialized.")
 
 init_db()  # تشغيلها أول ما يشتغل السيرفر
 
@@ -50,13 +50,13 @@ def init_summary_table():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
-    print("✅ Summary table initialized.")
+    print("Summary table initialized.")
 
 init_summary_table()
 
 
 
-# 🌐 الصفحة الرئيسية
+#  الصفحة الرئيسية
 @app.route('/')
 def home():
     return render_template("home.html")
@@ -123,8 +123,8 @@ def generate_summary(text, lang):
         )
         return response['choices'][0]['message']['content'].strip()
     except Exception as e:
-        print("❌ Summary generation error:", e)
-        return "❌ Failed to generate summary."
+        print("Summary generation error:", e)
+        return "Failed to generate summary."
 
 def get_video_title(video_url):
     try:
@@ -140,7 +140,7 @@ def get_video_title(video_url):
 
 
 
-# 🔐 تسجيل الدخول
+#  تسجيل الدخول
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -159,7 +159,7 @@ def login():
     return render_template("login.html")
 
 
-# 🧾 إنشاء حساب
+# إنشاء حساب
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -183,12 +183,11 @@ def signup():
     return render_template("signup.html")
 
 
-# 🔁 إعادة تعيين كلمة المرور (واجهة فقط الآن)
+#  إعادة تعيين كلمة المرور 
 @app.route('/reset-password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'POST':
         email = request.form['email']
-        # هنا ممكن تضيف إرسال بريد إلكتروني أو رابط مؤقت
         flash('If this email exists, a reset link was sent.')
         return redirect(url_for('login'))
     return render_template("reset_password.html")
@@ -196,7 +195,7 @@ def reset_password():
 
 
 
-# 🚪 تسجيل الخروج
+# تسجيل الخروج
 @app.route('/logout')
 def logout():
     session.clear()
@@ -221,17 +220,17 @@ def summarize():
             return render_template("summary.html", error=error)
 
         try:
-            # 📜 احصل على السكربت + اللغة
+            #  احصل على السكربت + اللغة
             transcript, lang = get_transcript_from_youtube(url)
 
-            # 🔍 تنظيف الترانسكريبت من HTML قبل التلخيص
+            #  تنظيف الترانسكريبت من HTML قبل التلخيص
             soup = BeautifulSoup(transcript, "html.parser")
             clean_text = soup.get_text(separator=' ', strip=True)
 
-            # 📄 تلخيص السكربت النظيف فقط
+            #  تلخيص السكربت النظيف فقط
             summary = generate_summary(clean_text, lang)
 
-            # 🖼 الصورة المصغّرة
+            #  الصورة المصغّرة
             from urllib.parse import urlparse, parse_qs
             video_id = parse_qs(urlparse(url).query).get("v", [None])[0]
             thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
@@ -242,11 +241,22 @@ def summarize():
             # حفظ التلخيص + السكربت إن كان المستخدم مسجل دخوله
             if 'user_id' in session:
                 conn = get_db_connection()
-                conn.execute('''
-                    INSERT INTO summaries (user_id, video_url, video_title, thumbnail, summary, transcript)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
-                conn.commit()
+                
+                # 🔍 تحقق إن الفيديو مش موجود مسبقًا لهذا المستخدم
+                existing = conn.execute('''
+                    SELECT * FROM summaries WHERE user_id = ? AND video_url = ?
+                ''', (session['user_id'], url)).fetchone()
+
+                if not existing:
+                    # ✅ إذا مش موجود: خزّنه
+                    conn.execute('''
+                        INSERT INTO summaries (user_id, video_url, video_title, thumbnail, summary, transcript)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
+                    conn.commit()
+                else:
+                    print("ℹ️ هذا الفيديو تم تلخيصه من قبل لنفس المستخدم، لن يتم تكراره.")
+
                 conn.close()
             return render_template("summary.html",
                                    transcript=transcript,
@@ -261,7 +271,7 @@ def summarize():
             import traceback
             print("🔥 Full Traceback:")
             traceback.print_exc()
-            error = f"❌ Error: {str(e)}"
+            error = f"Error: {str(e)}"
             return render_template("summary.html", error=error)
     return render_template("summarize.html")
 
@@ -270,11 +280,11 @@ def summarize():
 def chat_with_transcript():
     data = request.get_json()
     user_input = data.get('question')
-    transcript = data.get('transcript')  # لازم من هنا مش من session
+    transcript = data.get('transcript')
     lang = data.get('lang', 'en')
 
     if not user_input or not transcript:
-        return { "error": "❌ Missing transcript or question." }, 400
+        return { "error": " Missing transcript or question." }, 400
 
     try:
         prompt = f"Based on this video transcript:\n\n{transcript}\n\nAnswer this user question:\n{user_input}"
@@ -294,7 +304,7 @@ def chat_with_transcript():
         return { "reply": reply }
 
     except Exception as e:
-        return { "error": f"❌ Exception: {str(e)}" }, 500
+        return { "error": f"Exception: {str(e)}" }, 500
 
 
 
@@ -311,6 +321,22 @@ def my_notes():
     conn.close()
 
     return render_template("my_notes.html", summaries=summaries)
+
+
+
+@app.route('/delete-summary/<int:summary_id>', methods=['POST'])
+def delete_summary(summary_id):
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    conn.execute('DELETE FROM summaries WHERE id = ? AND user_id = ?', (summary_id, session['user_id']))
+    conn.commit()
+    conn.close()
+
+    flash("Delete from Database")
+    return redirect(url_for('my_notes'))
 
 
 @app.route('/ai-chat')

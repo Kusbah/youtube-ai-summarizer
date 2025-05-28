@@ -12,7 +12,7 @@ def get_transcript_from_youtube(url):
     try:
         transcript_obj = YouTubeTranscriptApi.list_transcripts(video_id)
 
-        # حاول تجيب أي لغة (عربي أو إنجليزي)
+        #  تجيب أي لغة (عربي أو إنجليزي)
         try:
             transcript = transcript_obj.find_transcript(['ar'])
         except:
@@ -28,7 +28,6 @@ def get_transcript_from_youtube(url):
             seconds = int(seconds % 60)
             return f"{minutes:02d}:{seconds:02d}"
 
-        # ✅ تحويل كل كلمة إلى <span> بكامل تصحيح الخصائص
         html_lines = []
         buffer = []
         start_time = 0
@@ -50,7 +49,6 @@ def get_transcript_from_youtube(url):
                 start_time = current_time
                 buffer = []
 
-        # لو ظل في جمل بباقي البافر
         if buffer:
             paragraph = " ".join(buffer)
             html_lines.append(f'<div class="line" data-start="{int(start_time)}">[{format_time(start_time)}] {paragraph}</div>')
@@ -59,7 +57,6 @@ def get_transcript_from_youtube(url):
         text = "\n".join(html_lines)
 
 
-        # 🔍 اكتشاف اللغة (من النصوص نفسها)
         try:
             language = detect(" ".join([entry.text for entry in transcript_data]))
         except:
