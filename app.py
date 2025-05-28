@@ -214,6 +214,7 @@ def summarize():
 
             # 🏷 عنوان الفيديو
             video_title = get_video_title(url)
+            session['transcript'] = clean_text
 
             return render_template("summary.html",
                                    transcript=transcript,
@@ -230,8 +231,39 @@ def summarize():
             traceback.print_exc()
             error = f"❌ Error: {str(e)}"
             return render_template("summary.html", error=error)
-
     return render_template("summarize.html")
+
+
+@app.route('/chat-with-transcript', methods=['POST'])
+def chat_with_transcript():
+    data = request.get_json()
+    user_input = data.get('question')
+    transcript = data.get('transcript')  # لازم من هنا مش من session
+    lang = data.get('lang', 'en')
+
+    if not user_input or not transcript:
+        return { "error": "❌ Missing transcript or question." }, 400
+
+    try:
+        prompt = f"Based on this video transcript:\n\n{transcript}\n\nAnswer this user question:\n{user_input}"
+        if lang == "ar":
+            prompt = f"بناءً على هذا النص:\n\n{transcript}\n\nأجب على هذا السؤال:\n{user_input}"
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant answering based on a YouTube transcript."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=400
+        )
+        reply = response['choices'][0]['message']['content'].strip()
+        return { "reply": reply }
+
+    except Exception as e:
+        return { "error": f"❌ Exception: {str(e)}" }, 500
+
 
 
 

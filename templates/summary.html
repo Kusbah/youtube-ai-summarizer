@@ -8,13 +8,12 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/summary.css') }}" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     crossorigin="anonymous" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
-
+  <input type="hidden" id="lang-data" value="{{ lang }}">
+  <input type="hidden" id="transcript-data" value="{{ transcript | striptags | safe }}">
   <!-- Sidebar Navigation -->
   <div class="sidebar">
     <button class="menu-btn"><i class="fas fa-bars"></i></button>
@@ -31,61 +30,69 @@
     <div class="left-side">
       <div class="video-card">
         <h3>{{ video_title }}</h3>
-        <iframe id="player" width="100%" height="300px" src="https://www.youtube.com/embed/{{ video_url.split('v=')[-1] }}?enablejsapi=1"></iframe>
+        <iframe id="player" width="100%" height="300px"
+          src="https://www.youtube.com/embed/{{ video_url.split('v=')[-1] }}?enablejsapi=1"></iframe>
         <a class="transcript-btn">Transcript</a>
       </div>
 
       <div class="transcript-box">
         <h4>📜 Transcript</h4>
-        <button id="download-transcript" style="margin-left: 10px; font-size: 13px; padding: 3px 8px;">⬇️ Download</button>
+        <button id="download-transcript" style="margin-left: 10px; font-size: 13px; padding: 3px 8px;">
+          <img src="https://img.icons8.com/?size=100&id=366&format=png&color=000000" width="20px" alt="download-icon">
+          Download
+        </button>
         <div class="transcript-box" id="transcript-box" dir="{{ 'rtl' if lang == 'ar' else 'ltr' }}">
           {{ transcript | safe }}
-        </div>        
-      </div>      
+        </div>
+      </div>
     </div>
 
     <!-- Right Section -->
-     
-<!-- Right Section -->
-<div class="right-side">
+    <div class="right-side">
+      <!-- AI Tabs -->
+      <div class="ai-tabs">
+        <button class="ai-tab active" onclick="switchTab('notes')">🗒️ AI Notes</button>
+        <button class="ai-tab" onclick="switchTab('chat')">💬 AI Chat</button>
+      </div>
 
-  <!-- AI Tabs -->
-  <div class="ai-tabs">
-    <button class="ai-tab active" onclick="switchTab('notes')">🗒️ AI Notes</button>
-    <button class="ai-tab" onclick="switchTab('chat')">💬 AI Chat</button>
-  </div>
+      <!-- AI Notes Section -->
+      <div class="ai-section" id="ai-notes">
+        <div class="summary-box">
+          <h4>🧠 Summary</h4>
+          <div class="summary-content">
+            <div class="summary-html">{{ summary | safe }}</div>
+          </div>
+        </div>
+      </div>
 
-  <!-- AI Notes Section -->
-  <div class="ai-section" id="ai-notes">
-    <div class="summary-box">
-      <h4>🧠 Summary</h4>
-      <div class="summary-content">
-        <div class="summary-html">{{ summary | safe }}</div>
+      <!-- AI Chat Section -->
+      <div class="ai-section" id="ai-chat" style="display: none;">
+        <div class="summary-box ai-chat-box">
+          <div class="chat-header">
+            <p>👋🏻 Hi<br>I'm your AI assistant. Feel free to ask me anything about this note!</p>
+          </div>
+        
+          <div class="chat-actions">
+            <button class="chat-btn" onclick="sendQuick('Give me 5 keywords')">🎯 Extract 5 keywords</button>
+            <button class="chat-btn" onclick="sendQuick('What is the outline of this video?')">❓ Extract the outline</button>
+            <button class="chat-btn" onclick="sendQuick('Summarize this content')">📝 Summarize this content</button>            
+          </div>
+        
+          <div id="chat-output" class="chat-output"></div>
+        
+          <div class="fixed-chat-input">
+            <input type="text" id="user-question" placeholder="Ask me anything about this content.." />
+            <button class="send-btn" onclick="sendQuestion()">
+              <img src="https://img.icons8.com/?size=100&id=IW5bIS9JfkRW&format=png&color=ffffff" width="18px" alt="Send">
+            </button>
+          </div>
+        </div>
+        
       </div>
     </div>
   </div>
-
-  <!-- AI Chat Section -->
-  <div class="ai-section" id="ai-chat" style="display: none;">
-    <div class="summary-box ai-chat-box">
-      <div class="chat-header">
-        <p>👋🏻 Hi<br>I'm your AI assistant. Feel free to ask me anything about this note!</p>
-      </div>
-  
-      <div class="chat-actions">
-        <button class="chat-btn">🎯 Extract 5 keywords</button>
-        <button class="chat-btn">❓ Extract the outline</button>
-        <button class="chat-btn">📝 Get Notes</button>
-      </div>
-  
-      <div class="chat-input">
-        <input type="text" placeholder="Ask me anything about this content.." />
-        <button class="send-btn">🔼</button>
-      </div>
-    </div>
-    </div>
-</div>
 
   <script src="{{ url_for('static', filename='js/summary.js') }}"></script>
 </body>
+
 </html>

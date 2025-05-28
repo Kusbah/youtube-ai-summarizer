@@ -90,3 +90,59 @@ function switchTab(tab) {
     document.getElementById('ai-notes').style.display = (tab === 'notes') ? 'block' : 'none';
     document.getElementById('ai-chat').style.display = (tab === 'chat') ? 'block' : 'none';
   }
+
+
+
+
+// ⬇️ دالة الإرسال السريعة من الزر وتخفي الزر بعد الضغط
+function sendQuick(questionText) {
+  const button = event.target.closest("button"); // الزر الذي تم الضغط عليه
+  if (button) button.style.display = "none";     // إخفاؤه
+
+  sendQuestion(questionText); // أرسل السؤال
+}
+
+// ⬇️ الدالة العامة التي ترسل إما من input أو من زر
+function sendQuestion(questionText = null) {
+  const input = document.getElementById("user-question");
+  const question = questionText || input.value.trim();  // استخدم من الزر أو من input
+  const chatOutput = document.getElementById("chat-output");
+
+  if (question === "") return;
+
+  // 🧑‍💬 أضف رسالة المستخدم
+  const userMsg = document.createElement("div");
+  userMsg.className = "chat-message user";
+  userMsg.innerHTML = `<span>🧑‍💬 ${question}</span>`;
+  chatOutput.appendChild(userMsg);
+
+  if (!questionText) input.value = "";  // امسح فقط إذا كان من input
+
+  // ✅ جلب السكربت واللغة من hidden input
+  const transcript = document.getElementById("transcript-data")?.value || "";
+  const lang = document.getElementById("lang-data")?.value || "en";
+  const direction = lang === "ar" ? "rtl" : "ltr";
+
+  fetch("/chat-with-transcript", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: question, transcript: transcript, lang: lang })
+  })
+    .then(res => res.json())
+    .then(data => {
+      const botMsg = document.createElement("div");
+      botMsg.className = "chat-message bot";
+      botMsg.innerHTML = `<span dir="${direction}">🤖 ${data.reply || data.error}</span>`;
+      chatOutput.appendChild(botMsg);
+      chatOutput.scrollTop = chatOutput.scrollHeight;
+    });
+}
+
+// ⬇️ إرسال عند الضغط على Enter
+document.getElementById("user-question").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    sendQuestion();
+  }
+});
+
