@@ -1,1 +1,21 @@
-<h1>My Notes</h1>
+<h2>📁 فيديوهاتي المُخلّصة</h2>
+{% if summaries %}
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+    {% for s in summaries %}
+    <div style="border: 1px solid #ccc; padding: 10px; width: 300px;">
+        <img src="{{ s['thumbnail'] }}" width="100%">
+        <h3>{{ s['video_title'] }}</h3>
+        <details>
+            <summary>📄 الملخص</summary>
+            <div style="font-size: 14px;">{{ s['summary']|safe }}</div>
+        </details>
+        <details>
+            <summary>📜 السكربت</summary>
+            <div style="white-space: pre-wrap; font-size: 13px;">{{ s['transcript'] }}</div>
+        </details>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p>لا يوجد أي تلخيص بعد.</p>
+{% endif %}

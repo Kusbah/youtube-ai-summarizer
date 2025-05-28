@@ -35,6 +35,27 @@ def init_db():
 
 init_db()  # تشغيلها أول ما يشتغل السيرفر
 
+
+def init_summary_table():
+    with get_db_connection() as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS summaries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                video_url TEXT,
+                video_title TEXT,
+                thumbnail TEXT,
+                summary TEXT,
+                transcript TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        ''')
+    print("✅ Summary table initialized.")
+
+init_summary_table()
+
+
+
 # 🌐 الصفحة الرئيسية
 @app.route('/')
 def home():
@@ -186,6 +207,9 @@ def logout():
 
 @app.route('/summarize', methods=['GET', 'POST'])
 def summarize():
+    if 'user_id' not in session:
+        flash("Please log in first.")
+        return redirect(url_for('login'))
     if request.method == 'POST':
         url = request.form.get('url')
         error = None
@@ -215,7 +239,15 @@ def summarize():
             # 🏷 عنوان الفيديو
             video_title = get_video_title(url)
             session['transcript'] = clean_text
-
+            # حفظ التلخيص + السكربت إن كان المستخدم مسجل دخوله
+            if 'user_id' in session:
+                conn = get_db_connection()
+                conn.execute('''
+                    INSERT INTO summaries (user_id, video_url, video_title, thumbnail, summary, transcript)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
+                conn.commit()
+                conn.close()
             return render_template("summary.html",
                                    transcript=transcript,
                                    video_url=url,
@@ -273,7 +305,13 @@ def my_notes():
     if 'user_id' not in session:
         flash("Please log in first.")
         return redirect(url_for('login'))
-    return render_template("my_notes.html")
+
+    conn = get_db_connection()
+    summaries = conn.execute('SELECT * FROM summaries WHERE user_id = ? ORDER BY created_at DESC', (session['user_id'],)).fetchall()
+    conn.close()
+
+    return render_template("my_notes.html", summaries=summaries)
+
 
 @app.route('/ai-chat')
 def ai_chat():
