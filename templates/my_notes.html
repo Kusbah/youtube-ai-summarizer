@@ -25,7 +25,11 @@
         {% for s in summaries %}
         <div class="note-card">
             <!-- مربع اختيار -->
-            <input type="checkbox" name="compare" value="{{ s['id'] }}" class="checkbox">
+            <label class="custom-checkbox">
+                <input type="checkbox" class="compare-checkbox" value="{{ s['id'] }}">
+                <span class="checkmark"></span>
+            </label>
+              
 
             <!-- صورة الفيديو -->
             <img src="{{ s['thumbnail'] }}" class="thumbnail">
@@ -48,9 +52,17 @@
     </div>
 
     <div class="compare-button-container">
-        <button class="compare-btn">Compare</button>
+        <form id="compare-form" action="/compare" method="POST">
+            <input type="hidden" name="compare_ids" id="compare1">
+            <input type="hidden" name="compare_ids" id="compare2">
+            <button type="submit" id="compare-btn" disabled class="compare-btn">Compare</button>
+        </form>
+          
+          
     </div>
 </div>
+<script src="{{ url_for('static', filename='js/my_notes.js') }}"></script>
+
 </body>
 
 </html>

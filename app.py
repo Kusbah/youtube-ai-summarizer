@@ -209,6 +209,7 @@ def summarize():
     if 'user_id' not in session:
         flash("Please log in first.")
         return redirect(url_for('login'))
+
     if request.method == 'POST':
         url = request.form.get('url')
         error = None
@@ -220,44 +221,52 @@ def summarize():
             return render_template("summary.html", error=error)
 
         try:
-            #  احصل على السكربت + اللغة
+            # 📝 استخراج السكربت واللغة
             transcript, lang = get_transcript_from_youtube(url)
 
-            #  تنظيف الترانسكريبت من HTML قبل التلخيص
+            # ✅ التحقق من فشل الترانسكريبت
+            if not transcript or transcript.strip() == "" or "Failed to fetch transcript" in transcript:
+                error = "❌ Couldn't fetch transcript. Video won't be saved."
+                return render_template("summary.html", error=error)
+
+            # 🧹 تنظيف النص
             soup = BeautifulSoup(transcript, "html.parser")
             clean_text = soup.get_text(separator=' ', strip=True)
 
-            #  تلخيص السكربت النظيف فقط
+            # 🧠 التلخيص
             summary = generate_summary(clean_text, lang)
 
-            #  الصورة المصغّرة
+            # 📷 الصورة المصغّرة
             from urllib.parse import urlparse, parse_qs
             video_id = parse_qs(urlparse(url).query).get("v", [None])[0]
             thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
 
             # 🏷 عنوان الفيديو
             video_title = get_video_title(url)
+
+            # حفظ الترانسكريبت في السيشن
             session['transcript'] = clean_text
-            # حفظ التلخيص + السكربت إن كان المستخدم مسجل دخوله
-            if 'user_id' in session:
-                conn = get_db_connection()
-                
-                # 🔍 تحقق إن الفيديو مش موجود مسبقًا لهذا المستخدم
-                existing = conn.execute('''
-                    SELECT * FROM summaries WHERE user_id = ? AND video_url = ?
-                ''', (session['user_id'], url)).fetchone()
 
-                if not existing:
-                    # ✅ إذا مش موجود: خزّنه
-                    conn.execute('''
-                        INSERT INTO summaries (user_id, video_url, video_title, thumbnail, summary, transcript)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
-                    conn.commit()
-                else:
-                    print("ℹ️ هذا الفيديو تم تلخيصه من قبل لنفس المستخدم، لن يتم تكراره.")
+            # 🗃 التخزين في قاعدة البيانات
+            conn = get_db_connection()
 
-                conn.close()
+            # 🚫 تحقق من التكرار
+            existing = conn.execute(
+                'SELECT * FROM summaries WHERE user_id = ? AND video_url = ?',
+                (session['user_id'], url)
+            ).fetchone()
+
+            if existing:
+                flash("⚠️ This video was already summarized before. It won't be saved again.")
+            else:
+                conn.execute('''
+                    INSERT INTO summaries (user_id, video_url, video_title, thumbnail, summary, transcript)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
+                conn.commit()
+
+            conn.close()
+
             return render_template("summary.html",
                                    transcript=transcript,
                                    video_url=url,
@@ -271,40 +280,191 @@ def summarize():
             import traceback
             print("🔥 Full Traceback:")
             traceback.print_exc()
-            error = f"Error: {str(e)}"
+            error = f"❌ Error while summarizing: {str(e)}"
             return render_template("summary.html", error=error)
+
     return render_template("summarize.html")
+
+
+
+
+
+
 
 
 @app.route('/chat-with-transcript', methods=['POST'])
 def chat_with_transcript():
     data = request.get_json()
-    user_input = data.get('question')
-    transcript = data.get('transcript')
-    lang = data.get('lang', 'en')
+    question = data.get("question")
+    transcript = data.get("transcript")
+    lang = data.get("lang", "en")
 
-    if not user_input or not transcript:
-        return { "error": " Missing transcript or question." }, 400
+    if not question or not transcript:
+        return {"error": "Missing transcript or question"}, 400
 
     try:
-        prompt = f"Based on this video transcript:\n\n{transcript}\n\nAnswer this user question:\n{user_input}"
         if lang == "ar":
-            prompt = f"بناءً على هذا النص:\n\n{transcript}\n\nأجب على هذا السؤال:\n{user_input}"
+            prompt = f"بناءً على هذا النص:\n\n{transcript}\n\nأجب على هذا السؤال:\n{question}"
+        else:
+            prompt = f"Based on the following transcript:\n\n{transcript}\n\nAnswer this question:\n{question}"
 
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant answering based on a YouTube transcript."},
+                {"role": "system", "content": "You are a helpful assistant answering questions based on a YouTube transcript."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=400
+            max_tokens=500
         )
-        reply = response['choices'][0]['message']['content'].strip()
-        return { "reply": reply }
+
+        reply = response["choices"][0]["message"]["content"].strip()
+        return {"reply": reply}
 
     except Exception as e:
-        return { "error": f"Exception: {str(e)}" }, 500
+        return {"error": f"Exception: {str(e)}"}, 500
+
+
+
+
+@app.route('/compare-chat', methods=['POST'])
+def compare_chat():
+    data = request.get_json()
+    q = data.get("question")
+    t1 = data.get("transcript1")
+    t2 = data.get("transcript2")
+    is_first = data.get("is_first", False)
+
+    if not t1 or not t2:
+        return {"reply": "❌ One of the transcripts is missing. Please make sure both videos have valid transcripts."}, 400
+
+    if is_first:
+        # الرد الأول: جدول HTML فقط
+        prompt = f"""Compare the following two video transcripts by creating an HTML table with 3 columns:
+- Topic
+- Video 1 Insight
+- Video 2 Insight
+
+Focus on differences in concepts, examples, and clarity. Return a well-formatted HTML table only without extra explanations.
+
+Transcript 1:
+{t1}
+
+Transcript 2:
+{t2}
+"""
+    else:
+        # ردود لاحقة بناء على اللغة
+        if "عربي" in q or "بالعربي" in q or "احكي" in q:
+            prompt = f"""بناءً على نص الفيديوهين، أجب على السؤال التالي باللغة العربية:
+
+السؤال: {q}
+
+النص الأول:
+{t1}
+
+النص الثاني:
+{t2}
+"""
+        else:
+            prompt = f"""Based on the two transcripts below, answer the user's question:
+
+Question: {q}
+
+Transcript 1:
+{t1}
+
+Transcript 2:
+{t2}
+"""
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a comparison expert who answers user questions using two video transcripts."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5,
+            max_tokens=900
+        )
+        return {"reply": response['choices'][0]['message']['content']}
+    except Exception as e:
+        print("🔥 Chat error:", str(e))
+        return {"reply": "❌ Error occurred."}, 500
+
+
+
+
+
+
+
+# @app.route("/compare-chat", methods=["POST"])
+# def compare_chat():
+#     data = request.get_json()
+#     q = data.get("question", "")
+#     t1 = data.get("transcript1", "")
+#     t2 = data.get("transcript2", "")
+#     is_first = data.get("is_first", False)
+
+#     if not t1 or not t2:
+#         return {"reply": "❌ One or both transcripts are missing."}
+
+#     if is_first:
+#         prompt = f"""قارن بين الفيديوهين التاليين باستخدام النصّين المقدمين. اعرض المقارنة على شكل جدول HTML أنيق، يتكون من الأعمدة التالية:
+
+#     - الموضوع
+#     - ملخص من الفيديو الأول
+#     - ملخص من الفيديو الثاني
+
+#     لا تكتب أي مقدمة أو شرح خارج الجدول. فقط أرسل جدول HTML الكامل.
+
+#     نص الفيديو الأول:
+#     {t1}
+
+#     نص الفيديو الثاني:
+#     {t2}
+#     """
+#     else:
+#         # لو المستخدم طلب بالعربي
+#         if "عربي" in q or "باللغة العربية" in q:
+#             prompt = f"""بناءً على الفيديوهين التاليين، أجب عن السؤال التالي باللغة العربية:
+
+#     السؤال:
+#     {q}
+
+#     نص الفيديو الأول:
+#     {t1}
+
+#     نص الفيديو الثاني:
+#     {t2}"""
+#         else:
+#             prompt = f"""Based on the two video transcripts below, answer the user's question:
+
+#     Question:
+#     {q}
+
+#     Transcript 1:
+#     {t1}
+
+#     Transcript 2:
+#     {t2}"""
+
+#     try:
+#         response = openai.ChatCompletion.create(
+#             model="gpt-3.5-turbo",
+#             messages=[
+#                 {"role": "system", "content": "You are a comparison assistant for YouTube videos."},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             temperature=0.6
+#         )
+#         reply = response['choices'][0]['message']['content']
+#         return {"reply": reply}
+#     except Exception as e:
+#         return {"reply": f"❌ Error: {str(e)}"}
+
+
 
 
 
@@ -337,6 +497,65 @@ def delete_summary(summary_id):
 
     flash("Delete from Database")
     return redirect(url_for('my_notes'))
+
+
+@app.route('/compare', methods=['POST'])
+def compare():
+    ids = request.form.getlist('compare_ids')
+    if len(ids) != 2:
+        flash("Please select exactly 2 videos.")
+        return redirect(url_for('my_notes'))
+
+    conn = get_db_connection()
+    video1 = conn.execute('SELECT * FROM summaries WHERE id = ?', (ids[0],)).fetchone()
+    video2 = conn.execute('SELECT * FROM summaries WHERE id = ?', (ids[1],)).fetchone()
+    conn.close()
+
+    return render_template('compare.html', video1=video1, video2=video2)
+
+
+
+
+
+@app.route('/chat-with-compare', methods=['POST'])
+def chat_with_compare():
+    data = request.get_json()
+    question = data.get('question')
+    transcript1 = data.get('transcript1')
+    transcript2 = data.get('transcript2')
+
+    if not question or not transcript1 or not transcript2:
+        return { "error": "Missing input fields." }, 400
+
+    prompt = f"""
+You are an AI assistant helping compare two educational videos.
+
+Video 1 Transcript:
+{transcript1}
+
+Video 2 Transcript:
+{transcript2}
+
+User question:
+{question}
+
+Provide your answer clearly based on the comparison between both videos.
+    """
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that compares two video transcripts."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=600
+        )
+        return { "reply": response["choices"][0]["message"]["content"].strip() }
+    except Exception as e:
+        return { "error": str(e) }, 500
+
 
 
 @app.route('/ai-chat')
