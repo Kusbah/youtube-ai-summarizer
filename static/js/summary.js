@@ -26,7 +26,7 @@ function startTracking() {
         const wordTime = parseInt(word.getAttribute("data-start"));
         if (wordTime === currentTime) {
           word.classList.add("highlighted");
-          word.scrollIntoView({ behavior: "smooth", block: "center" });
+          // word.scrollIntoView({ behavior: "smooth", block: "center" });
         } else {
           word.classList.remove("highlighted");
         }
@@ -69,12 +69,12 @@ window.addEventListener("DOMContentLoaded", function () {
 
       const summaryText = document.querySelector(".summary-html")?.innerText || "";
       const transcriptText = document.querySelector("#transcript-box")?.innerText || "";
-      
+
       // فقط احذف الإيموجيات من الملخص
       const cleanSummary = summaryText.replaceAll("🧠", "").replaceAll("📜", "").replaceAll("💡", "");
-      
+
       const fullText = `Summary:\n${cleanSummary}\n\nTranscript:\n${transcriptText}`;
-      
+
 
       const lines = doc.splitTextToSize(fullText, 180);
       doc.text(lines, 15, 20);
@@ -84,12 +84,12 @@ window.addEventListener("DOMContentLoaded", function () {
 });
 
 function switchTab(tab) {
-    document.querySelectorAll('.ai-tab').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+  document.querySelectorAll('.ai-tab').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
 
-    document.getElementById('ai-notes').style.display = (tab === 'notes') ? 'block' : 'none';
-    document.getElementById('ai-chat').style.display = (tab === 'chat') ? 'block' : 'none';
-  }
+  document.getElementById('ai-notes').style.display = (tab === 'notes') ? 'block' : 'none';
+  document.getElementById('ai-chat').style.display = (tab === 'chat') ? 'block' : 'none';
+}
 
 
 

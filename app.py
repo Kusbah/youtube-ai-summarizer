@@ -113,7 +113,7 @@ def generate_summary(text, lang):
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that summarizes YouTube transcripts."},
                 {"role": "user", "content": prompt}
@@ -309,7 +309,7 @@ def chat_with_transcript():
             prompt = f"Based on the following transcript:\n\n{transcript}\n\nAnswer this question:\n{question}"
 
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant answering questions based on a YouTube transcript."},
                 {"role": "user", "content": prompt}
@@ -380,7 +380,7 @@ Transcript 2:
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a comparison expert who answers user questions using two video transcripts."},
                 {"role": "user", "content": prompt}
@@ -544,7 +544,7 @@ Provide your answer clearly based on the comparison between both videos.
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that compares two video transcripts."},
                 {"role": "user", "content": prompt}
