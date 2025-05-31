@@ -399,70 +399,6 @@ Transcript 2:
 
 
 
-# @app.route("/compare-chat", methods=["POST"])
-# def compare_chat():
-#     data = request.get_json()
-#     q = data.get("question", "")
-#     t1 = data.get("transcript1", "")
-#     t2 = data.get("transcript2", "")
-#     is_first = data.get("is_first", False)
-
-#     if not t1 or not t2:
-#         return {"reply": "❌ One or both transcripts are missing."}
-
-#     if is_first:
-#         prompt = f"""قارن بين الفيديوهين التاليين باستخدام النصّين المقدمين. اعرض المقارنة على شكل جدول HTML أنيق، يتكون من الأعمدة التالية:
-
-#     - الموضوع
-#     - ملخص من الفيديو الأول
-#     - ملخص من الفيديو الثاني
-
-#     لا تكتب أي مقدمة أو شرح خارج الجدول. فقط أرسل جدول HTML الكامل.
-
-#     نص الفيديو الأول:
-#     {t1}
-
-#     نص الفيديو الثاني:
-#     {t2}
-#     """
-#     else:
-#         # لو المستخدم طلب بالعربي
-#         if "عربي" in q or "باللغة العربية" in q:
-#             prompt = f"""بناءً على الفيديوهين التاليين، أجب عن السؤال التالي باللغة العربية:
-
-#     السؤال:
-#     {q}
-
-#     نص الفيديو الأول:
-#     {t1}
-
-#     نص الفيديو الثاني:
-#     {t2}"""
-#         else:
-#             prompt = f"""Based on the two video transcripts below, answer the user's question:
-
-#     Question:
-#     {q}
-
-#     Transcript 1:
-#     {t1}
-
-#     Transcript 2:
-#     {t2}"""
-
-#     try:
-#         response = openai.ChatCompletion.create(
-#             model="gpt-3.5-turbo",
-#             messages=[
-#                 {"role": "system", "content": "You are a comparison assistant for YouTube videos."},
-#                 {"role": "user", "content": prompt}
-#             ],
-#             temperature=0.6
-#         )
-#         reply = response['choices'][0]['message']['content']
-#         return {"reply": reply}
-#     except Exception as e:
-#         return {"reply": f"❌ Error: {str(e)}"}
 
 
 
@@ -517,44 +453,44 @@ def compare():
 
 
 
-@app.route('/chat-with-compare', methods=['POST'])
-def chat_with_compare():
-    data = request.get_json()
-    question = data.get('question')
-    transcript1 = data.get('transcript1')
-    transcript2 = data.get('transcript2')
+# @app.route('/chat-with-compare', methods=['POST'])
+# def chat_with_compare():
+#     data = request.get_json()
+#     question = data.get('question')
+#     transcript1 = data.get('transcript1')
+#     transcript2 = data.get('transcript2')
 
-    if not question or not transcript1 or not transcript2:
-        return { "error": "Missing input fields." }, 400
+#     if not question or not transcript1 or not transcript2:
+#         return { "error": "Missing input fields." }, 400
 
-    prompt = f"""
-You are an AI assistant helping compare two educational videos.
+#     prompt = f"""
+# You are an AI assistant helping compare two educational videos.
 
-Video 1 Transcript:
-{transcript1}
+# Video 1 Transcript:
+# {transcript1}
 
-Video 2 Transcript:
-{transcript2}
+# Video 2 Transcript:
+# {transcript2}
 
-User question:
-{question}
+# User question:
+# {question}
 
-Provide your answer clearly based on the comparison between both videos.
-    """
+# Provide your answer clearly based on the comparison between both videos.
+#     """
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that compares two video transcripts."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-            max_tokens=600
-        )
-        return { "reply": response["choices"][0]["message"]["content"].strip() }
-    except Exception as e:
-        return { "error": str(e) }, 500
+#     try:
+#         response = openai.ChatCompletion.create(
+#             model="gpt-4o",
+#             messages=[
+#                 {"role": "system", "content": "You are a helpful assistant that compares two video transcripts."},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             temperature=0.7,
+#             max_tokens=600
+#         )
+#         return { "reply": response["choices"][0]["message"]["content"].strip() }
+#     except Exception as e:
+#         return { "error": str(e) }, 500
 
 
 
