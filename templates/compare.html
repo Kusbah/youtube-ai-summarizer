@@ -1,47 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Compare Videos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/compare.css') }}">
-</head>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/compare.css') }}"
+    />
+  </head>
 
-<body>
+  <body>
+    <input
+      type="hidden"
+      id="transcript1-data"
+      value="{{ video1.transcript | striptags | safe }}"
+    />
+    <input
+      type="hidden"
+      id="transcript2-data"
+      value="{{ video2.transcript | striptags | safe }}"
+    />
 
-    <input type="hidden" id="transcript1-data" value="{{ video1.transcript | striptags | safe }}">
-    <input type="hidden" id="transcript2-data" value="{{ video2.transcript | striptags | safe }}">
-  
     <div class="sidebar">
       <button class="menu-btn"><i class="fas fa-bars"></i></button>
       <div class="menu-items">
         <a href="{{ url_for('home') }}">Home</a>
         <a href="{{ url_for('summarize') }}">Chat</a>
-        <a href="{{ url_for('my_notes') }}">My Notes</a>
+        <a href="{{ url_for('my_notes') }}" class="active">My Notes</a>
         <a href="{{ url_for('logout') }}">Log Out</a>
       </div>
     </div>
-  
+
     <div class="compare-container">
       <div class="videos-section">
         <div class="video-card">
           <h3>{{ video1.video_title }}</h3>
-          <iframe src="https://www.youtube.com/embed/{{ video1.video_url.split('v=')[-1] }}"></iframe>
+          <iframe
+            src="https://www.youtube.com/embed/{{ video1.video_url.split('v=')[-1] }}"
+          ></iframe>
         </div>
-  
+
         <div class="video-card">
           <h3>{{ video2.video_title }}</h3>
-          <iframe src="https://www.youtube.com/embed/{{ video2.video_url.split('v=')[-1] }}"></iframe>
+          <iframe
+            src="https://www.youtube.com/embed/{{ video2.video_url.split('v=')[-1] }}"
+          ></iframe>
         </div>
       </div>
-  
+
       <div class="ai-chat-section">
         <div class="ai-chat-box">
           <div class="chat-header">
-            <p>👋🏻 Hi<br>I'm your AI assistant. Ask anything about the two videos!</p>
+            <p>
+              👋🏻 Hi<br />I'm your AI assistant. Ask anything about the two
+              videos!
+            </p>
           </div>
-  
+
           <div id="chat-output" class="chat-output">
             <!-- <table>
               <thead>
@@ -60,19 +76,24 @@
               </tbody>
             </table> -->
           </div>
-  
+
           <div class="fixed-chat-input">
-            <input type="text" id="compare-input" placeholder="Ask about the two videos...">
+            <input
+              type="text"
+              id="compare-input"
+              placeholder="Ask about the two videos..."
+            />
             <button class="send-btn" onclick="sendCompareQuestion()">
-              <img src="https://img.icons8.com/?size=100&id=IW5bIS9JfkRW&format=png&color=ffffff" width="18px" />
+              <img
+                src="https://img.icons8.com/?size=100&id=IW5bIS9JfkRW&format=png&color=ffffff"
+                width="18px"
+              />
             </button>
           </div>
         </div>
       </div>
     </div>
-     
-      
-    <script src="{{ url_for('static', filename='js/compare.js') }}"></script>
-</body>
 
+    <script src="{{ url_for('static', filename='js/compare.js') }}"></script>
+  </body>
 </html>
