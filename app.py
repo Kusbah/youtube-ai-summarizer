@@ -7,6 +7,7 @@ import openai
 from dotenv import load_dotenv
 import os
 load_dotenv()
+from urllib.parse import urlparse, parse_qs
 openai.api_key = os.getenv("OPENAI_API_KEY")
 from bs4 import BeautifulSoup
 
@@ -113,7 +114,7 @@ def generate_summary(text, lang):
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that summarizes YouTube transcripts."},
                 {"role": "user", "content": prompt}
@@ -211,23 +212,33 @@ def summarize():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        url = request.form.get('url')
+        raw_url = request.form.get('url')
         error = None
         transcript = None
         lang = None
 
-        if not url or "youtube.com" not in url:
+        if not raw_url or "youtube.com" not in raw_url:
             error = "❌ Invalid YouTube URL."
-            return render_template("summary.html", error=error)
+            return render_template("summary.html", error=error, video_url=None)
+
+        # ✅ تنظيف الرابط — استخراج video_id فقط وبناء رابط نظيف
+        parsed_url = urlparse(raw_url)
+        query_params = parse_qs(parsed_url.query)
+        video_id = query_params.get("v", [None])[0]
+        if not video_id:
+            error = "❌ Couldn't extract video ID."
+            return render_template("summary.html", error=error, video_url=None)
+        
+        # بناء رابط نظيف
+        url = f"https://www.youtube.com/watch?v={video_id}"
 
         try:
             # 📝 استخراج السكربت واللغة
             transcript, lang = get_transcript_from_youtube(url)
 
-            # ✅ التحقق من فشل الترانسكريبت
             if not transcript or transcript.strip() == "" or "Failed to fetch transcript" in transcript:
                 error = "❌ Couldn't fetch transcript. Video won't be saved."
-                return render_template("summary.html", error=error)
+                return render_template("summary.html", error=error, video_url=url)
 
             # 🧹 تنظيف النص
             soup = BeautifulSoup(transcript, "html.parser")
@@ -237,20 +248,15 @@ def summarize():
             summary = generate_summary(clean_text, lang)
 
             # 📷 الصورة المصغّرة
-            from urllib.parse import urlparse, parse_qs
-            video_id = parse_qs(urlparse(url).query).get("v", [None])[0]
             thumbnail = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
 
             # 🏷 عنوان الفيديو
             video_title = get_video_title(url)
 
-            # حفظ الترانسكريبت في السيشن
             session['transcript'] = clean_text
 
             # 🗃 التخزين في قاعدة البيانات
             conn = get_db_connection()
-
-            # 🚫 تحقق من التكرار
             existing = conn.execute(
                 'SELECT * FROM summaries WHERE user_id = ? AND video_url = ?',
                 (session['user_id'], url)
@@ -264,7 +270,6 @@ def summarize():
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (session['user_id'], url, video_title, thumbnail, summary, clean_text))
                 conn.commit()
-
             conn.close()
 
             return render_template("summary.html",
@@ -281,7 +286,7 @@ def summarize():
             print("🔥 Full Traceback:")
             traceback.print_exc()
             error = f"❌ Error while summarizing: {str(e)}"
-            return render_template("summary.html", error=error)
+            return render_template("summary.html", error=error, video_url=url)
 
     return render_template("summarize.html")
 
@@ -309,7 +314,7 @@ def chat_with_transcript():
             prompt = f"Based on the following transcript:\n\n{transcript}\n\nAnswer this question:\n{question}"
 
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant answering questions based on a YouTube transcript."},
                 {"role": "user", "content": prompt}
@@ -380,7 +385,7 @@ Transcript 2:
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a comparison expert who answers user questions using two video transcripts."},
                 {"role": "user", "content": prompt}
@@ -392,78 +397,6 @@ Transcript 2:
     except Exception as e:
         print("🔥 Chat error:", str(e))
         return {"reply": "❌ Error occurred."}, 500
-
-
-
-
-
-
-
-# @app.route("/compare-chat", methods=["POST"])
-# def compare_chat():
-#     data = request.get_json()
-#     q = data.get("question", "")
-#     t1 = data.get("transcript1", "")
-#     t2 = data.get("transcript2", "")
-#     is_first = data.get("is_first", False)
-
-#     if not t1 or not t2:
-#         return {"reply": "❌ One or both transcripts are missing."}
-
-#     if is_first:
-#         prompt = f"""قارن بين الفيديوهين التاليين باستخدام النصّين المقدمين. اعرض المقارنة على شكل جدول HTML أنيق، يتكون من الأعمدة التالية:
-
-#     - الموضوع
-#     - ملخص من الفيديو الأول
-#     - ملخص من الفيديو الثاني
-
-#     لا تكتب أي مقدمة أو شرح خارج الجدول. فقط أرسل جدول HTML الكامل.
-
-#     نص الفيديو الأول:
-#     {t1}
-
-#     نص الفيديو الثاني:
-#     {t2}
-#     """
-#     else:
-#         # لو المستخدم طلب بالعربي
-#         if "عربي" in q or "باللغة العربية" in q:
-#             prompt = f"""بناءً على الفيديوهين التاليين، أجب عن السؤال التالي باللغة العربية:
-
-#     السؤال:
-#     {q}
-
-#     نص الفيديو الأول:
-#     {t1}
-
-#     نص الفيديو الثاني:
-#     {t2}"""
-#         else:
-#             prompt = f"""Based on the two video transcripts below, answer the user's question:
-
-#     Question:
-#     {q}
-
-#     Transcript 1:
-#     {t1}
-
-#     Transcript 2:
-#     {t2}"""
-
-#     try:
-#         response = openai.ChatCompletion.create(
-#             model="gpt-3.5-turbo",
-#             messages=[
-#                 {"role": "system", "content": "You are a comparison assistant for YouTube videos."},
-#                 {"role": "user", "content": prompt}
-#             ],
-#             temperature=0.6
-#         )
-#         reply = response['choices'][0]['message']['content']
-#         return {"reply": reply}
-#     except Exception as e:
-#         return {"reply": f"❌ Error: {str(e)}"}
-
 
 
 
@@ -544,7 +477,7 @@ Provide your answer clearly based on the comparison between both videos.
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that compares two video transcripts."},
                 {"role": "user", "content": prompt}
